@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Basket.API.Repositories;
 
 namespace Basket.API
 {
@@ -27,8 +28,11 @@ namespace Basket.API
         {
             services.AddStackExchangeRedisCache(options =>
             {
-                options.Configuration = Configuration.GetValue<string>("CacheSettings.ConnectionString");
+                var connectionString = Configuration.GetValue<string>("CacheSettings:ConnectionString");
+                options.Configuration = connectionString;
             });
+
+            services.AddScoped<IBasketRepository, BasketRepository>();
 
             services.AddControllers();
             services.AddSwaggerGen(c =>
