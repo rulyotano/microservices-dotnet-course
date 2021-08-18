@@ -1,9 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Ordering.Domain.Entities;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Ordering.Infrastructure.Persistence
@@ -14,7 +12,9 @@ namespace Ordering.Infrastructure.Persistence
         {
             if (context.Orders.Any())
                 return;
-            context.Orders.AddRange(GetPreconfiguredOrders());
+            await context.Orders.AddRangeAsync(GetPreconfiguredOrders());
+            await context.SaveChangesAsync();
+            logger.LogInformation("Seed database associated with context {DbContextName}", nameof(OrderContext));
         }
 
         private static IEnumerable<Order> GetPreconfiguredOrders()
