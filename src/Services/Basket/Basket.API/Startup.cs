@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Basket.API.Repositories;
 using Basket.API.GrpcServices;
 using Discount.Grpc.Protos;
+using MassTransit;
 
 namespace Basket.API
 {
@@ -28,23 +29,48 @@ namespace Basket.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddTransient<IDiscountGrpcService, DiscountGrpcService>();
+            services.AddScoped<IBasketRepository, BasketRepository>();
+            services.AddControllers();
+            services.AddAutoMapper(typeof(Startup));
+
+            ConfigureGrpc(services);
+            ConfigureRedis(services);
+            ConfigureRabbitMqMassTransit(services);
+            ConfigureSwagger(services);
+        }
+
+        private static void ConfigureSwagger(IServiceCollection services)
+        {
+            services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo {Title = "Basket.API", Version = "v1"}); });
+        }
+
+        private void ConfigureRabbitMqMassTransit(IServiceCollection services)
+        {
+            services.AddMassTransit(config =>
+            {
+                config.UsingRabbitMq((context, rabbitMqConfig) =>
+                {
+                    rabbitMqConfig.Host(Configuration["EventBusSettings:HostAddress"]);
+                });
+            });
+            services.AddMassTransitHostedService();
+        }
+
+        private void ConfigureGrpc(IServiceCollection services)
+        {
             services.AddGrpcClient<DiscountProService.DiscountProServiceClient>(options =>
             {
                 options.Address = new Uri(Configuration["GrpcSettings:DiscountUrl"]);
             });
-            services.AddTransient<IDiscountGrpcService, DiscountGrpcService>();
+        }
+
+        private void ConfigureRedis(IServiceCollection services)
+        {
             services.AddStackExchangeRedisCache(options =>
             {
                 var connectionString = Configuration.GetValue<string>("CacheSettings:ConnectionString");
                 options.Configuration = connectionString;
-            });
-
-            services.AddScoped<IBasketRepository, BasketRepository>();
-
-            services.AddControllers();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Basket.API", Version = "v1" });
             });
         }
 
